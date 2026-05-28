@@ -1,0 +1,60 @@
+# Local/temporary files
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Backups directory (local snapshots/recovery files)
+backups/*
+!backups/.gitkeep
+
+# User-specific (if added later)
+.local/share/history
+.cache/*
+.config/*/cache
+
+# Build artifacts (if compiling anything locally)
+*.o
+*.so
+*.dylib
+*.exe
+
+# IDE/editor temporary files
+.vscode/
+.idea/
+*.code-workspace
+
+# Terminal session files
+.zsh_history
+.bash_history
+.python_history
+
+# SSH keys (NEVER commit)
+.ssh/
+id_rsa*
+*.pem
+
+# Secrets (NEVER commit)
+.env
+.env.local
+credentials.json
+secrets.yaml
+bitwarden*.json
+
+# Large files
+*.iso
+*.gz
+*.tar
+*.zip
+
+# Ignore OS-specific hidden files
+.Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+.TemporaryItems
+.VolumeIcon.icns
+.fseventsd
+.Spotlight-V100
+.Trashes
