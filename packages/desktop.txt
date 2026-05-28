@@ -1,0 +1,22 @@
+# Wayland + Hyprland
+wayland
+wayland-protocols
+hyprland
+xdg-desktop-portal
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+xdg-user-dirs
+
+# Hyprland utilities
+hypridle
+hyprlock
+hyprpicker
+hyprcursor
+
+# Display server
+xwayland
+
+# Utilities
+qt5-wayland
+qt6-wayland
+egl-wayland

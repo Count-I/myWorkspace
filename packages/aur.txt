@@ -1,0 +1,16 @@
+# AUR-only packages (installed via yay)
+
+# Launcher
+walker
+
+# Theme
+catppuccin-gtk-theme-mocha
+
+# Cursors (from chaotic-aur, but install via yay)
+catppuccin-cursors-mocha
+
+# Proton-GE (gaming, from chaotic-aur)
+proton-ge-custom-bin
+
+# Optional: ProtonUp-Qt (GUI for ProtonGE management)
+protonup-qt

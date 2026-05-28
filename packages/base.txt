@@ -1,0 +1,21 @@
+# Base system packages
+base
+base-devel
+linux-zen
+linux-zen-headers
+linux-firmware
+intel-ucode
+
+# Essential tools
+git
+curl
+wget
+
+# Stow for dotfile management
+stow
+
+# Build essentials
+gcc
+make
+cmake
+pkgconfig

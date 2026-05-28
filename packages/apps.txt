@@ -1,0 +1,63 @@
+# Terminal emulator
+kitty
+
+# Shell
+zsh
+zsh-completions
+zsh-autosuggestions
+zsh-syntax-highlighting
+
+# Prompt
+starship
+
+# Terminal editor
+nano
+vim
+
+# Code editor
+code
+
+# Browser
+google-chrome
+
+# Password manager
+bitwarden
+bitwarden-cli
+
+# Encryption
+age
+age-plugin-yubikey
+
+# File manager (GUI)
+thunar
+tumbler
+ffmpegthumbnailer
+gvfs
+file-roller
+
+# File manager (TUI)
+yazi
+
+# Media utilities
+imagemagick
+ffmpeg
+
+# Documentation viewer
+man-db
+man-pages
+
+# Additional utilities
+gnome-keyring
+libsecret
+
+# XDG utilities
+xdg-utils
+xdg-user-dirs-gtk
+
+# Printing support (optional)
+cups
+cups-filters
+ghostscript
+
+# OpenCode AI coding tool
+opencode

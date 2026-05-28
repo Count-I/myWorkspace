@@ -1,0 +1,19 @@
+# PipeWire audio stack (modern replacement for PulseAudio + JACK)
+pipewire
+pipewire-alsa
+pipewire-audio
+pipewire-jack
+pipewire-pulse
+wireplumber
+
+# 32-bit audio support (for gaming)
+lib32-libpipewire
+lib32-pipewire
+
+# Audio control
+pavucontrol
+
+# ALSA utilities
+alsa-lib
+alsa-utils
+alsa-plugins

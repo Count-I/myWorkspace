@@ -1,0 +1,62 @@
+# System monitoring
+btop
+nvtop
+
+# Git utilities
+lazygit
+
+# System information
+fastfetch
+lsb-release
+neofetch
+
+# Disk utilities
+duf
+dust
+ncdu
+
+# Text utilities
+bat
+jq
+yq
+
+# Search and find
+ripgrep
+fd
+
+# File utilities
+eza
+tree
+less
+zip
+unzip
+tar
+gzip
+
+# Download utilities
+aria2
+rsync
+
+# System utilities
+htop
+iotop
+iftop
+nmap
+nethogs
+
+# Debugging/profiling
+perf
+strace
+ltrace
+
+# Terminal utilities
+tmux
+screen
+ugrep
+
+# Network utilities
+curl
+wget
+dig
+whois
+mtr

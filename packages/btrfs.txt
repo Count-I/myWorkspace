@@ -1,0 +1,10 @@
+# BTRFS filesystem utilities
+btrfs-progs
+
+# Snapper for snapshots (snap-pac installed separately in install/06-snapper.sh)
+snapper
+snap-pac
+
+# Optional: BTRFS compression tools
+brotli
+zstd

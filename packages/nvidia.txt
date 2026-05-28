@@ -1,0 +1,14 @@
+# NVIDIA driver (open-dkms for Turing+)
+nvidia-open-dkms
+nvidia-utils
+nvidia-prime
+libva-nvidia-driver
+
+# 32-bit NVIDIA support (for gaming)
+lib32-nvidia-utils
+
+# CUDA support (optional, for compute workloads)
+cuda-tools
+
+# NVIDIA firmware
+linux-firmware-nvidia
