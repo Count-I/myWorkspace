@@ -1,0 +1,22 @@
+# Google Chrome desktop entry - Wayland + VAAPI enabled
+
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Google Chrome
+Comment=Access the Internet
+Icon=google-chrome
+Exec=/usr/bin/google-chrome-stable --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoDecoderLinuxGL,VaapiIgnoreDriverChecks --enable-accelerated-video-decode --enable-gpu-rasterization --ignore-gpu-blocklist %U
+Terminal=false
+MimeType=text/html;text/xml;application/xhtml+xml;image/webp;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;application/x-extension-webapp;x-scheme-handler/webcal;x-scheme-handler/mailto;x-scheme-handler/news;x-scheme-handler/nntp;x-scheme-handler/tel;x-scheme-handler/sms;x-scheme-handler/skype;
+Categories=Network;WebBrowser;
+Actions=new-window;new-private-window;
+StartupNotify=true
+
+[Desktop Action new-window]
+Name=New Window
+Exec=/usr/bin/google-chrome-stable --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoDecoderLinuxGL,VaapiIgnoreDriverChecks --enable-accelerated-video-decode --enable-gpu-rasterization --ignore-gpu-blocklist
+
+[Desktop Action new-private-window]
+Name=New Incognito Window
+Exec=/usr/bin/google-chrome-stable --incognito --ozone-platform=wayland --enable-features=VaapiVideoDecoder,VaapiVideoDecoderLinuxGL,VaapiIgnoreDriverChecks --enable-accelerated-video-decode --enable-gpu-rasterization --ignore-gpu-blocklist

@@ -1,0 +1,28 @@
+# Mako notification daemon configuration - Catppuccin Mocha
+
+background-color=#1e1e2eee
+text-color=#cdd6f4
+border-color=#cba6f7
+border-size=2
+border-radius=10
+padding=8
+margin=8
+font=JetBrainsMono Nerd Font 11
+default-timeout=5000
+max-history=100
+layer=overlay
+sort=-time
+
+[urgency=low]
+background-color=#313244aa
+border-color=#89b4faaa
+
+[urgency=normal]
+background-color=#313244aa
+border-color=#cba6f7aa
+
+[urgency=critical]
+background-color=#f38ba8cc
+border-color=#f38ba8
+text-color=#1e1e2e
+timeout=0

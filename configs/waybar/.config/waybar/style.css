@@ -1,0 +1,135 @@
+/* Catppuccin Mocha waybar theme */
+
+@define-color crust  #11111b;
+@define-color mantle #181825;
+@define-color base   #1e1e2e;
+@define-color surface0 #313244;
+@define-color surface1 #45475a;
+@define-color surface2 #585b70;
+@define-color overlay0 #6c7086;
+@define-color overlay1 #7f849c;
+@define-color overlay2 #9399b2;
+@define-color subtext0 #a6adc8;
+@define-color subtext1 #bac2de;
+@define-color text   #cdd6f4;
+
+@define-color mauve  #cba6f7;
+@define-color blue   #89b4fa;
+@define-color green  #a6e3a1;
+@define-color yellow #f9e2af;
+@define-color peach  #fab387;
+@define-color red    #f38ba8;
+
+* {
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 13px;
+    border: none;
+    border-radius: 0;
+    min-height: 0;
+}
+
+window#waybar {
+    background-color: @base;
+    color: @text;
+    border-bottom: 2px solid @surface0;
+    padding: 0px;
+}
+
+.modules-left,
+.modules-center,
+.modules-right {
+    padding: 0px 4px;
+}
+
+#workspaces {
+    padding: 0px;
+    background: transparent;
+}
+
+#workspaces button {
+    padding: 0px 8px;
+    margin: 0px;
+    color: @overlay0;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+}
+
+#workspaces button.active {
+    color: @mauve;
+    border-bottom-color: @mauve;
+}
+
+#workspaces button.urgent {
+    color: @red;
+}
+
+#window {
+    margin-left: 8px;
+    color: @subtext0;
+}
+
+#clock {
+    color: @blue;
+    margin-right: 8px;
+}
+
+#temperature {
+    color: @yellow;
+}
+
+#temperature.critical {
+    color: @red;
+}
+
+#temperature#gpu {
+    color: @green;
+}
+
+#pulseaudio {
+    color: @green;
+}
+
+#pulseaudio.muted {
+    color: @surface1;
+}
+
+#network {
+    color: @blue;
+}
+
+#network.disconnected {
+    color: @red;
+}
+
+#battery {
+    color: @yellow;
+    margin-right: 8px;
+}
+
+#battery.charging {
+    color: @green;
+}
+
+#battery.warning {
+    color: @peach;
+}
+
+#battery.critical {
+    color: @red;
+}
+
+#tray {
+    padding: 0px 8px;
+    background: transparent;
+}
+
+tooltip {
+    background-color: @mantle;
+    border: 1px solid @surface0;
+    border-radius: 6px;
+    color: @text;
+}
+
+tooltip label {
+    color: @text;
+}

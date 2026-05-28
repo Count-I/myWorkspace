@@ -1,0 +1,4 @@
+# Yazi theme configuration - uses Catppuccin Mocha colors
+
+[flavor]
+use = "catppuccin-mocha"

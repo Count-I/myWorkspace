@@ -1,0 +1,63 @@
+// Fastfetch system information display configuration
+
+{
+    "logo": {
+        "source": "arch"
+    },
+    "display": {
+        "keyWidth": 12,
+        "separator": " : "
+    },
+    "modules": [
+        {
+            "type": "title"
+        },
+        {
+            "type": "separator"
+        },
+        {
+            "type": "os"
+        },
+        {
+            "type": "kernel"
+        },
+        {
+            "type": "uptime"
+        },
+        {
+            "type": "cpu"
+        },
+        {
+            "type": "gpu"
+        },
+        {
+            "type": "memory"
+        },
+        {
+            "type": "disk",
+            "key": "Storage"
+        },
+        {
+            "type": "shell"
+        },
+        {
+            "type": "terminal"
+        },
+        {
+            "type": "wmde",
+            "key": "WM"
+        },
+        {
+            "type": "theme"
+        },
+        {
+            "type": "icons"
+        },
+        {
+            "type": "cursor"
+        },
+        {
+            "type": "font"
+        }
+    ]
+}

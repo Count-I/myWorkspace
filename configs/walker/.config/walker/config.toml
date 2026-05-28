@@ -1,0 +1,14 @@
+# Walker application launcher configuration
+
+[list]
+limit = 20
+height = 10
+
+[ui]
+anchors = "center"
+height = 400
+width = 1000
+theme = "catppuccin-mocha"
+
+[runner]
+application_folder = "/usr/share/applications"
