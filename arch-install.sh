@@ -54,6 +54,29 @@ log_info "Ultra-autonomous installation for workstation deployment"
 echo ""
 
 # ============================================================================
+# VERIFY REQUIRED TOOLS
+# ============================================================================
+log_phase "VERIFYING REQUIRED TOOLS"
+
+REQUIRED_TOOLS=("fdisk" "wipefs" "partprobe" "mkfs.vfat" "mkfs.btrfs" "btrfs" "git")
+MISSING_TOOLS=()
+
+for tool in "${REQUIRED_TOOLS[@]}"; do
+    if ! command -v "$tool" &>/dev/null; then
+        MISSING_TOOLS+=("$tool")
+    fi
+done
+
+if [[ ${#MISSING_TOOLS[@]} -gt 0 ]]; then
+    log_warn "Missing tools: ${MISSING_TOOLS[*]}"
+    log_info "Installing missing packages..."
+    pacman -Sy --noconfirm dosfstools btrfs-progs util-linux git
+fi
+
+log_info "✓ All required tools available"
+echo ""
+
+# ============================================================================
 # DISK SELECTION
 # ============================================================================
 log_phase "DISK DETECTION AND SELECTION"
@@ -158,7 +181,7 @@ partprobe "$TARGET_DISK" 2>/dev/null || true
 log_phase "FILESYSTEM CREATION"
 
 log_info "Creating FAT32 for EFI..."
-mkfs.fat -F 32 "$EFI_PART" > /dev/null
+mkfs.vfat -F 32 "$EFI_PART" > /dev/null
 
 log_info "Creating BTRFS for root..."
 mkfs.btrfs -f "$ROOT_PART" > /dev/null
