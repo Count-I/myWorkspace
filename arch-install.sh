@@ -305,15 +305,15 @@ log_info "Creating BTRFS for root..."
 RETRY_COUNT=0
 
 while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
-    if mkfs.btrfs -f "$ROOT_PART" 2>/dev/null; then
+    if mkfs.btrfs -f "$ROOT_PART" 2>&1 | tee /tmp/btrfs-format.log; then
         log_info "✓ BTRFS partition formatted"
         break
     else
         RETRY_COUNT=$((RETRY_COUNT + 1))
+        log_warn "BTRFS format failed (attempt $RETRY_COUNT/$MAX_RETRIES)"
+        cat /tmp/btrfs-format.log
         if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
-            log_warn "BTRFS format failed (attempt $RETRY_COUNT/$MAX_RETRIES)"
             sleep 1
-            # Force clean the partition
             wipefs -af "$ROOT_PART" 2>/dev/null || true
             dd if=/dev/zero of="$ROOT_PART" bs=1M count=10 2>/dev/null || true
             sleep 1
@@ -323,10 +323,6 @@ done
 
 if [[ $RETRY_COUNT -eq $MAX_RETRIES ]]; then
     log_error "Could not format BTRFS partition after $MAX_RETRIES attempts."
-    log_error ""
-    log_error "Debugging:"
-    log_error "  mkfs.btrfs -f $ROOT_PART"
-    mkfs.btrfs -f "$ROOT_PART" 2>&1 || true
     exit 1
 fi
 
@@ -337,15 +333,34 @@ if ! mount "$ROOT_PART" /mnt; then
     exit 1
 fi
 
+# Verify BTRFS is actually mounted
+if ! btrfs filesystem show /mnt &>/dev/null; then
+    log_error "BTRFS filesystem not properly mounted at /mnt"
+    log_error "Debugging info:"
+    btrfs filesystem show "$ROOT_PART" || true
+    umount /mnt 2>/dev/null || true
+    exit 1
+fi
+log_info "✓ BTRFS filesystem verified at /mnt"
+
 SUBVOLS=("@" "@home" "@cache" "@log" "@snapshots")
 for subvol in "${SUBVOLS[@]}"; do
-    if ! btrfs subvolume create /mnt/"$subvol" 2>/dev/null; then
+    log_info "Creating subvolume: $subvol..."
+    if ! btrfs subvolume create /mnt/"$subvol"; then
         log_error "Failed to create subvolume: $subvol"
-        umount /mnt
+        log_error "Error output above ↑"
+        umount /mnt 2>/dev/null || true
         exit 1
     fi
     log_info "  ✓ Created subvolume: $subvol"
 done
+
+log_info "Verifying subvolumes were created..."
+if ! btrfs subvolume list /mnt; then
+    log_error "Could not list subvolumes. They may not have been created."
+    umount /mnt 2>/dev/null || true
+    exit 1
+fi
 
 umount /mnt
 

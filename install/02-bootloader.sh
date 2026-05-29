@@ -21,11 +21,26 @@ fi
 
 log_info "Configuring systemd-boot..."
 
-# Get root PARTUUID
-ROOT_PARTUUID=$(lsblk -no PARTUUID / | head -1)
+# Get root partition device
+ROOT_DEVICE=$(df / | tail -1 | awk '{print $1}')
+log_info "Root device: $ROOT_DEVICE"
+
+# Get root PARTUUID using blkid (more reliable than lsblk)
+ROOT_PARTUUID=$(blkid -s PARTUUID -o value "$ROOT_DEVICE" 2>/dev/null)
 if [[ -z "$ROOT_PARTUUID" ]]; then
-    log_error "Could not determine root PARTUUID."
-    exit 1
+    log_error "Could not determine root PARTUUID from $ROOT_DEVICE"
+    log_error "Debugging:"
+    blkid "$ROOT_DEVICE" || true
+    log_error "Trying alternative method..."
+    # Fallback: try to get UUID and convert
+    ROOT_UUID=$(blkid -s UUID -o value "$ROOT_DEVICE" 2>/dev/null)
+    if [[ -z "$ROOT_UUID" ]]; then
+        log_error "Could not determine UUID either. Bootloader configuration incomplete."
+        log_error "You may need to manually configure /boot/loader/entries/arch-zen.conf"
+        exit 1
+    fi
+    log_warn "Using UUID instead of PARTUUID: $ROOT_UUID"
+    ROOT_PARTUUID="$ROOT_UUID"
 fi
 log_info "Root PARTUUID: $ROOT_PARTUUID"
 

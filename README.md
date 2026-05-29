@@ -21,42 +21,36 @@ Production-grade, reproducible Arch Linux workstation platform for daily profess
 
 ## Quick Start
 
-### From Arch ISO (5 minutes)
+### One Command. Complete Installation.
 
 ```bash
 # 1. Boot Arch ISO, connect to internet
 ping archlinux.org
 
-# 2. Clone the repository
+# 2. Clone repository
 cd /tmp
 git clone https://github.com/user/myWorkspace.git
 cd myWorkspace
 
-# 3. Run the installer (interactive disk selection)
-sudo bash arch-install.sh
+# 3. Run the installer (prompts for disk, password, confirmation)
+sudo bash install.sh
 
-# 4. Reboot when it finishes
-sudo reboot
-```
-
-### After Reboot (20-30 minutes)
-
-```bash
-# 5. Clone repository again (or preserve from /tmp)
-cd /tmp
-git clone https://github.com/user/myWorkspace.git
-cd myWorkspace
-
-# 6. Run workstation bootstrap
-./bootstrap.sh
-
-# 7. Reboot to launch Hyprland
+# 4. Reboot when finished
 sudo reboot
 
-# First login: TTY autologin → Hyprland launches automatically
+# Done. System boots straight to terminal (TTY autologin).
 ```
 
-**Total time:** ~1 hour (including downloads and AUR compilation)
+**Total time:** ~30-45 minutes (downloads + compilation included)
+
+The script handles:
+- Disk selection (safe, user-confirmed)
+- BTRFS partitioning + subvolumes
+- Base system installation
+- User account creation
+- Dotfiles deployment
+- Service configuration
+- Everything needed to boot into a working system
 
 ### What Gets Installed
 
