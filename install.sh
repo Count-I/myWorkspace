@@ -107,6 +107,21 @@ fi
 
 log_info "Proceeding with installation on $TARGET_DISK"
 
+# Safety check: verify target disk is not root filesystem
+ROOT_DISK=$(df / | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//')
+if [[ "$TARGET_DISK" == "$ROOT_DISK" ]]; then
+    log_error "ERROR: Target disk ($TARGET_DISK) is your root filesystem."
+    log_error "You cannot partition the disk you're currently running from."
+    log_error ""
+    log_error "Options:"
+    log_error "  1. Boot from Arch ISO instead of running Arch installation"
+    log_error "  2. Use a different disk"
+    log_error "  3. Clone this repo to external USB and run from there"
+    exit 1
+fi
+
+log_info "✓ Target disk is safe (not root filesystem)"
+
 # ============================================================================
 # PARTITION & FORMAT
 # ============================================================================
