@@ -48,14 +48,36 @@ else
     log_info "✓ yay already installed"
 fi
 
-# Verify Chaotic-AUR keyring
-log_info "Verifying Chaotic-AUR keyring..."
+# Verify Chaotic-AUR keyring (optional, non-blocking)
+log_info "Configuring Chaotic-AUR (optional, for faster AUR builds)..."
 if ! pacman -Q chaotic-keyring &>/dev/null; then
-    log_warn "chaotic-keyring not installed. Installing..."
-    sudo pacman-key --recv-key 3056513887B78AEB
-    sudo pacman-key --lsign-key 3056513887B78AEB
-    sudo pacman -S --noconfirm chaotic-keyring chaotic-mirrorlist
-    log_info "✓ Chaotic-AUR keyring configured"
+    log_info "Setting up Chaotic-AUR repository..."
+
+    # Add Chaotic-AUR to pacman.conf if not already present
+    if ! grep -q "^\[chaotic-aur\]" /etc/pacman.conf; then
+        sudo tee -a /etc/pacman.conf > /dev/null << 'EOF'
+
+[chaotic-aur]
+Server = https://cdn-mirror.chaotic.cx/$repo/$arch
+Server = https://mirror-mirror.chaotic.cx/$repo/$arch
+Server = https://mirror.garudalinux.org/chaotic-aur/$repo/$arch
+EOF
+    fi
+
+    # Import Chaotic-AUR key
+    if sudo pacman-key --recv-key 3056513887B78AEB 2>/dev/null; then
+        sudo pacman-key --lsign-key 3056513887B78AEB
+        sudo pacman -Sy &>/dev/null
+
+        # Try to install (if it fails, warn but continue)
+        if sudo pacman -S --noconfirm chaotic-keyring chaotic-mirrorlist 2>/dev/null; then
+            log_info "✓ Chaotic-AUR keyring configured"
+        else
+            log_warn "Could not install chaotic-keyring (optional). Continuing without it."
+        fi
+    else
+        log_warn "Could not import Chaotic-AUR key (optional). Continuing without it."
+    fi
 else
     log_info "✓ chaotic-keyring already installed"
 fi

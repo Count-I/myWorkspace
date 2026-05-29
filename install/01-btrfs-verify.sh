@@ -40,9 +40,14 @@ done
 
 if [[ ${#MISSING_SUBVOLS[@]} -gt 0 ]]; then
     log_error "Missing subvolumes: ${MISSING_SUBVOLS[*]}"
-    log_error "You must create all required subvolumes before running bootstrap."
-    log_error "Refer to docs/installation.md for BTRFS setup procedure."
-    exit 1
+    log_error "These should have been created by arch-install.sh."
+    log_error "If running manually, refer to docs/installation.md for BTRFS setup procedure."
+    read -p "Continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_error "Aborting. Please run arch-install.sh or manually create subvolumes."
+        exit 1
+    fi
 fi
 
 # Verify /.snapshots is mounted
