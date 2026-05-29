@@ -112,6 +112,15 @@ log_info "Proceeding with installation on $TARGET_DISK"
 # ============================================================================
 log_phase "PARTITIONING DISK"
 
+log_warn "Unmounting any mounted partitions..."
+for partition in "${TARGET_DISK}"*; do
+    if mountpoint -q "$partition" 2>/dev/null; then
+        log_info "  Unmounting $partition..."
+        umount -f "$partition" 2>/dev/null || umount -l "$partition" 2>/dev/null || true
+    fi
+done
+sleep 1
+
 log_warn "Wiping disk..."
 wipefs -af "$TARGET_DISK" 2>/dev/null || true
 sleep 1
