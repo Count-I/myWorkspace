@@ -112,15 +112,30 @@ log_warn "Wiping disk..."
 wipefs -af "$TARGET_DISK"
 partprobe "$TARGET_DISK" 2>/dev/null || true
 
-log_info "Creating GPT partition table..."
-parted -s "$TARGET_DISK" mklabel gpt
+log_info "Creating GPT partition table with fdisk..."
+# Use fdisk with heredoc for non-interactive partitioning
+fdisk "$TARGET_DISK" << FDISK_EOF
+g
+n
+1
 
-log_info "Creating EFI partition (512M)..."
-parted -s "$TARGET_DISK" mkpart primary fat32 1M 513M
-parted -s "$TARGET_DISK" set 1 esp on
++512M
+t
+1
+n
+2
 
-log_info "Creating root partition (remaining space)..."
-parted -s "$TARGET_DISK" mkpart primary ext4 513M 100%
+
+w
+FDISK_EOF
+
+# Set EFI partition type
+fdisk "$TARGET_DISK" << FDISK_EOF
+t
+1
+1
+w
+FDISK_EOF
 
 # Detect partition names (sda1/sda2 vs nvme0n1p1/nvme0n1p2)
 if [[ "$TARGET_DISK" == *"nvme"* ]]; then
