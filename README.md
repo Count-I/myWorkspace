@@ -21,36 +21,45 @@ Production-grade, reproducible Arch Linux workstation platform for daily profess
 
 ## Quick Start
 
-### One Command. Complete Installation.
+### Two-Step Installation (Safe & Resilient)
 
+**Step 1: Use archinstall (native Arch installer)**
 ```bash
-# 1. Boot Arch ISO, connect to internet
-ping archlinux.org
+# Boot Arch ISO
+archinstall
 
-# 2. Clone repository
-cd /tmp
-git clone https://github.com/user/myWorkspace.git
-cd myWorkspace
-
-# 3. Run the installer (prompts for disk, password, confirmation)
-sudo bash install.sh
-
-# 4. Reboot when finished
-sudo reboot
-
-# Done. System boots straight to terminal (TTY autologin).
+# When prompted, select:
+# - Filesystem: BTRFS
+# - Region, locale, keyboard as desired
+# - Create user account
+# - Install
 ```
 
-**Total time:** ~30-45 minutes (downloads + compilation included)
+**Step 2: Run configuration script**
+```bash
+# After reboot, login and:
+cd ~
+git clone https://github.com/user/myWorkspace.git
+cd myWorkspace
+sudo bash install.sh
 
-The script handles:
-- Disk selection (safe, user-confirmed)
-- BTRFS partitioning + subvolumes
-- Base system installation
-- User account creation
-- Dotfiles deployment
-- Service configuration
-- Everything needed to boot into a working system
+# Script configures system
+# (safe to run multiple times)
+```
+
+**Total time:** ~20-30 minutes (archinstall + configuration)
+
+### What `install.sh` Does
+
+- ✅ Creates BTRFS snapshots for rollback
+- ✅ Backs up critical files
+- ✅ Configures locale, hostname, sudoers
+- ✅ Installs essential packages
+- ✅ Enables NetworkManager
+- ✅ Deploys dotfiles via Stow
+- ✅ Verifies all components
+- ✅ Auto-heals from failures
+- ✅ Idempotent (safe to re-run)
 
 ### What Gets Installed
 
