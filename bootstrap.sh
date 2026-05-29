@@ -55,24 +55,17 @@ pre_flight() {
     fi
     log_info "Running as unprivileged user ✓"
 
-    # Check BTRFS subvolumes
+    # Check BTRFS subvolumes (informative only - 01-btrfs-verify.sh will validate)
     if [[ ! -d /.snapshots ]]; then
-        log_warn "/.snapshots directory not found. This indicates BTRFS subvolumes may not be set up."
-        log_warn "You must have completed the BTRFS partitioning steps from docs/installation.md"
-        read -p "Continue anyway? (y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_error "Aborting bootstrap."
-            exit 1
-        fi
+        log_warn "/.snapshots directory not found."
+        log_warn "Phase 01 (BTRFS Verification) will validate your filesystem setup."
     else
         log_info "BTRFS /.snapshots subvolume detected ✓"
     fi
 
-    # Check systemd-boot
+    # Check systemd-boot (informative only)
     if [[ ! -d /boot/loader ]]; then
         log_warn "/boot/loader not found. systemd-boot may not be configured."
-        log_warn "Ensure systemd-boot is installed and /boot is mounted."
     else
         log_info "systemd-boot directory found ✓"
     fi

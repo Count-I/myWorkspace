@@ -2,7 +2,7 @@
 
 Production-grade, reproducible Arch Linux workstation platform for daily professional use.
 
-**After a clean Arch Linux installation, `./bootstrap.sh` deploys the full workstation automatically.**
+**Ultra-autonomous installation:** Boot Arch ISO → `sudo bash arch-install.sh` → `./bootstrap.sh` → Fully configured workstation.
 
 ---
 
@@ -15,53 +15,89 @@ Production-grade, reproducible Arch Linux workstation platform for daily profess
 - **GNOME-integrated theming** (Catppuccin Mocha, static)
 - **Minimal, observable deployment** — every tool has one responsibility
 - **Fully documented** — recovery procedures, debugging, configuration
+- **Ultra-autonomous** — from ISO to full workstation with two scripts
 
 ---
 
 ## Quick Start
 
-### On Fresh Arch Installation
+### From Arch ISO (5 minutes)
 
 ```bash
-# Clone the repository
-git clone https://github.com/user/workstation ~/Codes/myWorkspace
-cd ~/Codes/myWorkspace
+# 1. Boot Arch ISO, connect to internet
+ping archlinux.org
 
-# Run the bootstrap script
+# 2. Clone the repository
+cd /tmp
+git clone https://github.com/user/myWorkspace.git
+cd myWorkspace
+
+# 3. Run the installer (interactive disk selection)
+sudo bash arch-install.sh
+
+# 4. Reboot when it finishes
+sudo reboot
+```
+
+### After Reboot (20-30 minutes)
+
+```bash
+# 5. Clone repository again (or preserve from /tmp)
+cd /tmp
+git clone https://github.com/user/myWorkspace.git
+cd myWorkspace
+
+# 6. Run workstation bootstrap
 ./bootstrap.sh
 
-# Reboot
-reboot
+# 7. Reboot to launch Hyprland
+sudo reboot
 
 # First login: TTY autologin → Hyprland launches automatically
 ```
 
-**Installation time:** ~30 minutes (depending on network + AUR compile time).
+**Total time:** ~1 hour (including downloads and AUR compilation)
 
-### What bootstrap.sh Does
+### What Gets Installed
 
-1. Verifies Arch Linux + installs yay (AUR helper)
-2. Checks BTRFS subvolumes are present
-3. Configures systemd-boot with NVIDIA kernel parameters
-4. Installs NVIDIA drivers + mkinitcpio configuration
-5. Installs all packages (pacman + AUR)
-6. Configures snapper (BTRFS snapshots)
-7. Enables system services (NetworkManager, PipeWire, Docker, etc.)
-8. Deploys dotfiles via GNU Stow
-9. Applies Catppuccin Mocha theme
-10. Configures Docker, fonts, TTY autologin
+**Stage 1: `arch-install.sh` (base system)**
+1. Detects available disks (user selects target)
+2. Partitions: EFI (512M) + root (BTRFS)
+3. Creates BTRFS subvolumes (`@`, `@home`, `@cache`, `@log`, `@snapshots`)
+4. Installs base system with `pacstrap` (linux-zen, git, NetworkManager)
+5. Configures systemd-boot with NVIDIA kernel parameters
+6. Sets up TTY autologin
+7. Creates user account
+
+**Stage 2: `bootstrap.sh` (workstation)**
+1. Pre-flight setup (yay, base-devel, Chaotic-AUR keyring)
+2. BTRFS verification
+3. NVIDIA driver installation
+4. Installs workstation packages (Hyprland, waybar, kitty, Chrome, etc.)
+5. AUR packages (walker, hyprland-git, etc.)
+6. Snapper configuration with automatic pre-update snapshots
+7. System services (NetworkManager, PipeWire, Docker)
+8. Dotfiles deployment via GNU Stow
+9. GTK theme (Catppuccin Mocha)
+10. Docker configuration
+11. Font installation
+12. Post-install verification
 
 ---
 
 ## System Requirements
 
-- **Arch Linux** (fresh or existing)
-- **BTRFS filesystem** with subvolumes `@`, `@home`, `@cache`, `@log`, `@snapshots`
-- **systemd-boot** bootloader (GRUB not supported)
+- **Arch Linux ISO** (latest from archlinux.org)
+  - `arch-install.sh` will create BTRFS automatically
+  - No pre-configuration needed
+- **Internet connectivity** (wired or WiFi)
+- **Target disk:** 50 GB+ free space (will be completely formatted)
 - **NVIDIA GPU** (Turing or newer; GTX 1650 Mobile tested)
-- **Intel iGPU** (for hybrid display configuration)
+  - Optional: Also works on Intel iGPU (GPU selection automated)
 
 **Tested hardware:** ASUS laptop, Intel i5-10300H, NVIDIA GTX 1650 Mobile, 24 GB RAM, NVMe SSD
+
+**Note:** The installer will automatically configure BTRFS with required subvolumes, systemd-boot bootloader, and kernel parameters. No manual filesystem setup needed.
 
 ---
 
@@ -164,7 +200,7 @@ No overlapping daemons, duplicate services, or redundant frameworks:
 
 ## Documentation
 
-- **`docs/installation.md`** — Full fresh install walkthrough (BTRFS setup, dual-boot options)
+- **`INSTALLATION.md`** — Complete installation guide (from ISO to working system)
 - **`docs/nvidia.md`** — NVIDIA driver rationale, PRIME, Wayland configuration
 - **`docs/recovery.md`** — Recovery handbook for common failures
 - **`docs/rollback.md`** — Snapper rollback procedures (boot into snapshot, promote to default)
@@ -175,15 +211,18 @@ No overlapping daemons, duplicate services, or redundant frameworks:
 
 ---
 
-## First Run After Bootstrap
+## First Run After Full Installation
 
-1. **Reboot** after bootstrap completes
-2. **Login:** TTY autologin → Hyprland launches (no password needed on tty1)
-3. **Manual setup:**
+1. **First reboot** (after `arch-install.sh`) — system is minimal, user created
+2. **Clone repository again** (or preserve from /tmp) and run `./bootstrap.sh`
+3. **Second reboot** (after `bootstrap.sh` completes) — Hyprland launches automatically
+4. **Login:** TTY autologin → Hyprland starts with wallpaper and waybar
+5. **Manual setup:**
    - Open Bitwarden, sync vault
    - Open Steam, set up library
    - Run `ProtonUp-Qt` to install Proton-GE (optional)
-   - Generate SSH keys if needed
+   - Generate SSH keys: `ssh-keygen -t ed25519`
+   - Configure Git: `git config --global user.name "Your Name"` and `git config --global user.email "email@example.com"`
 
 ---
 
