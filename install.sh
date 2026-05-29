@@ -42,14 +42,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 if ! grep -q "Arch" /etc/os-release 2>/dev/null; then
-    log_error "This script must run from Arch ISO."
-    exit 1
-fi
-
-RUNNING_DISK=$(df -P / | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//')
-if [[ ! "$RUNNING_DISK" =~ (loop|sr|iso|ram|tmpfs) ]]; then
-    log_error "ERROR: Script must run from Arch ISO, not from persistent disk."
-    log_error "You are running from: $RUNNING_DISK"
+    log_error "This script requires Arch Linux."
     exit 1
 fi
 
