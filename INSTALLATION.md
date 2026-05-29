@@ -38,6 +38,10 @@ The installation is split into **two stages**:
 
 ### Step 1: Boot Arch ISO
 
+**CRITICAL:** The script MUST run from live ISO environment, not from an already-installed Arch system.
+
+#### Physical Hardware
+
 Create bootable USB and boot into Arch ISO:
 
 ```bash
@@ -46,7 +50,47 @@ sudo dd if=archlinux-*.iso of=/dev/sdX bs=4M status=progress
 # Replace sdX with your USB drive (e.g., sdb, sdc)
 ```
 
-Boot the target machine from USB.
+Boot the target machine from USB (press F12, Esc, or Del during boot to choose USB).
+
+#### Virtual Machine (KVM/QEMU, VirtualBox, VMware)
+
+**IMPORTANT:** You must boot the VM FROM the ISO file, not from the virtual disk.
+
+**KVM/QEMU:**
+```bash
+# Download Arch ISO
+wget https://mirror.archlinux.org/iso/latest/archlinux-*.iso
+
+# Boot VM from ISO (NOT from disk)
+qemu-system-x86_64 \
+  -enable-kvm \
+  -cpu host \
+  -smp 4 \
+  -m 8G \
+  -cdrom archlinux-*.iso \  # Boot from ISO
+  -drive file=arch-test.qcow2,format=qcow2 \
+  -boot d  # Boot from CD first
+```
+
+**VirtualBox:**
+1. Create VM with 4 CPU, 8 GB RAM, 50 GB disk
+2. Settings → Storage → Click "Empty" (CD drive)
+3. Click disc icon → Choose archlinux-*.iso
+4. Start VM (it boots from ISO automatically)
+5. **Important:** Do NOT use "Run installer" or click existing Arch installation
+
+**VMware:**
+1. Create VM with defaults
+2. Edit VM → CD/DVD (IDE) → Connect → archlinux-*.iso
+3. Power on VM (boots from ISO)
+
+After ISO boots, you should see:
+```
+Arch Linux [YYYY.MM.DD]
+(continues loading...)
+
+[root@archiso ~]#
+```
 
 ### Step 2: Connect to Internet
 
