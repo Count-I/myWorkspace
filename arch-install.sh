@@ -131,37 +131,48 @@ echo ""
 # ============================================================================
 log_phase "DISK PARTITIONING"
 
-log_warn "Wiping disk..."
-wipefs -af "$TARGET_DISK"
-partprobe "$TARGET_DISK" 2>/dev/null || true
+# Unmount any existing partitions on the target disk
+log_info "Unmounting any existing filesystems on $TARGET_DISK..."
+for partition in "${TARGET_DISK}"*; do
+    if mountpoint -q "$partition" 2>/dev/null; then
+        log_warn "Unmounting $partition..."
+        umount -f "$partition" 2>/dev/null || umount -l "$partition" 2>/dev/null || true
+    fi
+done
 
-log_info "Creating GPT partition table with fdisk..."
-# Use fdisk with heredoc for non-interactive partitioning
-fdisk "$TARGET_DISK" << FDISK_EOF
-g
-n
-1
+# Give the system time to release the disk
+sleep 1
 
-+512M
-t
-1
-n
-2
+# Close any LUKS or LVM volumes
+log_info "Checking for encrypted or logical volumes..."
+if command -v lvchange &>/dev/null; then
+    lvchange -an 2>/dev/null || true
+fi
+if command -v dmsetup &>/dev/null; then
+    dmsetup remove_all 2>/dev/null || true
+fi
 
+# Wipe the disk completely
+log_warn "Wiping disk completely..."
+if ! wipefs -af "$TARGET_DISK" 2>/dev/null; then
+    log_warn "wipefs failed, attempting dd..."
+    dd if=/dev/zero of="$TARGET_DISK" bs=1M count=10 2>/dev/null || true
+fi
 
-w
-FDISK_EOF
+# Wait for the disk to stabilize
+sleep 2
 
-# Set EFI partition type
-fdisk "$TARGET_DISK" << FDISK_EOF
-t
-1
-1
-w
-FDISK_EOF
+# Reload partition table
+log_info "Reloading partition table..."
+if command -v partprobe &>/dev/null; then
+    partprobe "$TARGET_DISK" 2>/dev/null || true
+fi
+if command -v sfdisk &>/dev/null; then
+    sfdisk -R "$TARGET_DISK" 2>/dev/null || true
+fi
 
 # Detect partition names (sda1/sda2 vs nvme0n1p1/nvme0n1p2)
-if [[ "$TARGET_DISK" == *"nvme"* ]]; then
+if [[ "$TARGET_DISK" == *"nvme"* ]] || [[ "$TARGET_DISK" == *"mmcblk"* ]]; then
     EFI_PART="${TARGET_DISK}p1"
     ROOT_PART="${TARGET_DISK}p2"
 else
@@ -169,42 +180,173 @@ else
     ROOT_PART="${TARGET_DISK}2"
 fi
 
+log_info "Creating GPT partition table..."
+# Use fdisk with heredoc for non-interactive partitioning
+if ! fdisk "$TARGET_DISK" << FDISK_EOF
+g
+n
+1
+
++512M
+t
+1
+1
+n
+2
+
+
+w
+FDISK_EOF
+then
+    log_error "Failed to create partitions with fdisk. Retrying with sgdisk..."
+    if command -v sgdisk &>/dev/null; then
+        sgdisk -Z "$TARGET_DISK" 2>/dev/null || true
+        sgdisk -n 1:2048:+512M -t 1:EF00 -n 2:0:0 -t 2:8300 "$TARGET_DISK" || {
+            log_error "sgdisk also failed. Aborting."
+            exit 1
+        }
+    else
+        log_error "fdisk failed and sgdisk not available. Install gptfdisk or check disk."
+        exit 1
+    fi
+fi
+
 log_info "EFI partition: $EFI_PART"
 log_info "Root partition: $ROOT_PART"
 
-sleep 2
-partprobe "$TARGET_DISK" 2>/dev/null || true
+# Wait for kernel to recognize new partitions
+log_info "Waiting for kernel to recognize new partitions..."
+for i in {1..10}; do
+    if [[ -e "$EFI_PART" ]] && [[ -e "$ROOT_PART" ]]; then
+        log_info "Partitions detected on attempt $i"
+        break
+    fi
+    log_warn "Waiting for partitions... ($i/10)"
+    sleep 1
+    partprobe "$TARGET_DISK" 2>/dev/null || true
+done
+
+if [[ ! -e "$EFI_PART" ]] || [[ ! -e "$ROOT_PART" ]]; then
+    log_error "Partitions not detected after 10 seconds. This may indicate a kernel issue."
+    log_error "Try rebooting or checking dmesg for errors."
+    exit 1
+fi
 
 # ============================================================================
 # FILESYSTEM CREATION
 # ============================================================================
 log_phase "FILESYSTEM CREATION"
 
+# Unmount if already mounted from previous attempt
+for path in /mnt/.snapshots /mnt/var/log /mnt/var/cache /mnt/home /mnt/boot /mnt; do
+    if mountpoint -q "$path" 2>/dev/null; then
+        umount -R "$path" 2>/dev/null || true
+    fi
+done
+
+# Format EFI partition with retry
 log_info "Creating FAT32 for EFI..."
-mkfs.vfat -F 32 "$EFI_PART" > /dev/null
+RETRY_COUNT=0
+MAX_RETRIES=3
+while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+    if mkfs.vfat -F 32 "$EFI_PART" 2>/dev/null; then
+        log_info "✓ EFI partition formatted"
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        log_warn "EFI format failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+        sleep 2
+        wipefs -a "$EFI_PART" 2>/dev/null || true
+    fi
+done
 
+if [[ $RETRY_COUNT -eq $MAX_RETRIES ]]; then
+    log_error "Could not format EFI partition after $MAX_RETRIES attempts."
+    log_error "The partition may be read-only or hardware error. Check: blockdev --getro $EFI_PART"
+    exit 1
+fi
+
+# Format root partition with retry
 log_info "Creating BTRFS for root..."
-mkfs.btrfs -f "$ROOT_PART" > /dev/null
+RETRY_COUNT=0
+while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
+    if mkfs.btrfs -f "$ROOT_PART" 2>/dev/null; then
+        log_info "✓ BTRFS partition formatted"
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        log_warn "BTRFS format failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+        sleep 2
+        wipefs -a "$ROOT_PART" 2>/dev/null || true
+    fi
+done
 
+if [[ $RETRY_COUNT -eq $MAX_RETRIES ]]; then
+    log_error "Could not format BTRFS partition after $MAX_RETRIES attempts."
+    exit 1
+fi
+
+# Create BTRFS subvolumes with error checking
 log_info "Creating BTRFS subvolumes..."
-mount "$ROOT_PART" /mnt
-btrfs subvolume create /mnt/@
-btrfs subvolume create /mnt/@home
-btrfs subvolume create /mnt/@cache
-btrfs subvolume create /mnt/@log
-btrfs subvolume create /mnt/@snapshots
+if ! mount "$ROOT_PART" /mnt; then
+    log_error "Failed to mount $ROOT_PART at /mnt"
+    exit 1
+fi
+
+SUBVOLS=("@" "@home" "@cache" "@log" "@snapshots")
+for subvol in "${SUBVOLS[@]}"; do
+    if ! btrfs subvolume create /mnt/"$subvol" 2>/dev/null; then
+        log_error "Failed to create subvolume: $subvol"
+        umount /mnt
+        exit 1
+    fi
+    log_info "  ✓ Created subvolume: $subvol"
+done
+
 umount /mnt
 
+# Mount subvolumes with comprehensive error checking
 log_info "Mounting subvolumes..."
 BTRFS_OPTS="rw,relatime,compress=zstd:3,space_cache=v2"
 
-mount -o "$BTRFS_OPTS,subvol=@" "$ROOT_PART" /mnt
+# Create mount point if needed
+mkdir -p /mnt
+
+# Mount root
+if ! mount -o "$BTRFS_OPTS,subvol=@" "$ROOT_PART" /mnt; then
+    log_error "Failed to mount root BTRFS subvolume"
+    exit 1
+fi
+log_info "  ✓ Mounted: / (@)"
+
+# Create directories for other mounts
 mkdir -p /mnt/{home,var/cache,var/log,.snapshots,boot}
-mount -o "$BTRFS_OPTS,subvol=@home" "$ROOT_PART" /mnt/home
-mount -o "$BTRFS_OPTS,subvol=@cache" "$ROOT_PART" /mnt/var/cache
-mount -o "$BTRFS_OPTS,subvol=@log" "$ROOT_PART" /mnt/var/log
-mount -o "$BTRFS_OPTS,subvol=@snapshots" "$ROOT_PART" /mnt/.snapshots
-mount "$EFI_PART" /mnt/boot
+
+# Mount subvolumes
+declare -a MOUNT_POINTS=(
+    "home:@home:/mnt/home"
+    "var/cache:@cache:/mnt/var/cache"
+    "var/log:@log:/mnt/var/log"
+    ".snapshots:@snapshots:/mnt/.snapshots"
+)
+
+for mount_spec in "${MOUNT_POINTS[@]}"; do
+    IFS=: read -r path subvol mountpoint <<< "$mount_spec"
+    if ! mount -o "$BTRFS_OPTS,subvol=$subvol" "$ROOT_PART" "$mountpoint"; then
+        log_error "Failed to mount $subvol at $mountpoint"
+        umount -R /mnt
+        exit 1
+    fi
+    log_info "  ✓ Mounted: $path ($subvol)"
+done
+
+# Mount EFI partition
+if ! mount "$EFI_PART" /mnt/boot; then
+    log_error "Failed to mount EFI partition at /mnt/boot"
+    umount -R /mnt
+    exit 1
+fi
+log_info "  ✓ Mounted: /boot (EFI)"
 
 log_info "✓ Filesystem setup complete"
 
