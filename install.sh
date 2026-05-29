@@ -107,43 +107,30 @@ fi
 
 log_info "Proceeding with installation on $TARGET_DISK"
 
-# Safety check: verify target disk is not root filesystem
+# Detect if target disk is root filesystem
 ROOT_DISK=$(df / | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//')
+INSTALLING_ON_ROOT=0
 if [[ "$TARGET_DISK" == "$ROOT_DISK" ]]; then
-    log_error "ERROR: Target disk ($TARGET_DISK) is your root filesystem."
-    log_error "You cannot partition the disk you're currently running from."
-    log_error ""
-    log_error "Options:"
-    log_error "  1. Boot from Arch ISO instead of running Arch installation"
-    log_error "  2. Use a different disk"
-    log_error "  3. Clone this repo to external USB and run from there"
-    exit 1
+    INSTALLING_ON_ROOT=1
+    log_warn "Target disk is your root filesystem. Will use free space."
+    log_warn "Existing system will be preserved. New system as second partition."
 fi
-
-log_info "✓ Target disk is safe (not root filesystem)"
 
 # ============================================================================
 # PARTITION & FORMAT
 # ============================================================================
 log_phase "PARTITIONING DISK"
 
-log_warn "Unmounting all partitions from target disk..."
-# Find all mount points for partitions of this disk and unmount them
-MOUNTED=$(mount | grep "$TARGET_DISK" | awk '{print $3}')
-if [[ -n "$MOUNTED" ]]; then
-    while IFS= read -r mount_point; do
-        log_info "  Unmounting $mount_point..."
-        umount -f "$mount_point" 2>/dev/null || umount -l "$mount_point" 2>/dev/null || true
-    done <<< "$MOUNTED"
-fi
-sleep 1
+if [[ $INSTALLING_ON_ROOT -eq 0 ]]; then
+    # Case 1: Fresh disk - wipe and partition completely
+    log_info "Fresh disk detected. Creating new partition table..."
 
-log_warn "Wiping disk..."
-wipefs -af "$TARGET_DISK" 2>/dev/null || true
-sleep 1
+    log_warn "Wiping disk..."
+    wipefs -af "$TARGET_DISK" 2>/dev/null || true
+    sleep 1
 
-# Partition with fdisk
-fdisk "$TARGET_DISK" << FDISK_EOF
+    log_info "Creating GPT partition table..."
+    fdisk "$TARGET_DISK" << FDISK_EOF
 g
 n
 1
@@ -159,13 +146,62 @@ n
 w
 FDISK_EOF
 
-# Detect partition naming
-if [[ "$TARGET_DISK" == *"nvme"* ]] || [[ "$TARGET_DISK" == *"mmcblk"* ]]; then
-    EFI_PART="${TARGET_DISK}p1"
-    ROOT_PART="${TARGET_DISK}p2"
+    # Detect partition naming
+    if [[ "$TARGET_DISK" == *"nvme"* ]] || [[ "$TARGET_DISK" == *"mmcblk"* ]]; then
+        EFI_PART="${TARGET_DISK}p1"
+        ROOT_PART="${TARGET_DISK}p2"
+    else
+        EFI_PART="${TARGET_DISK}1"
+        ROOT_PART="${TARGET_DISK}2"
+    fi
+
 else
-    EFI_PART="${TARGET_DISK}1"
-    ROOT_PART="${TARGET_DISK}2"
+    # Case 2: Existing system - use free space
+    log_info "Existing system detected. Analyzing disk space..."
+
+    # Check if GPT or MBR
+    PARTITION_TABLE=$(fdisk -l "$TARGET_DISK" | grep -i "disklabel type" | awk '{print $NF}')
+    if [[ -z "$PARTITION_TABLE" ]]; then
+        PARTITION_TABLE="dos"
+    fi
+
+    log_info "Current partition table: $PARTITION_TABLE"
+
+    if [[ "$PARTITION_TABLE" != "gpt" ]]; then
+        log_error "Target disk uses $PARTITION_TABLE. Only GPT is supported for existing systems."
+        log_error "To install: convert to GPT or use fresh disk."
+        exit 1
+    fi
+
+    # Get next partition number
+    LAST_PART=$(fdisk -l "$TARGET_DISK" | grep "^${TARGET_DISK}" | tail -1 | awk '{print $1}' | sed "s|${TARGET_DISK}||")
+    NEXT_PART=$((LAST_PART + 1))
+
+    # Get disk size and last partition end
+    DISK_SIZE=$(fdisk -l "$TARGET_DISK" | grep "^Disk ${TARGET_DISK}" | grep -oP '\d+(?= bytes)')
+    LAST_END=$(fdisk -l "$TARGET_DISK" | grep "^${TARGET_DISK}" | tail -1 | awk '{print $(NF-2)}')
+
+    log_info "Creating new partition $NEXT_PART for Arch installation..."
+
+    # Detect partition naming
+    if [[ "$TARGET_DISK" == *"nvme"* ]] || [[ "$TARGET_DISK" == *"mmcblk"* ]]; then
+        EFI_PART="${TARGET_DISK}p1"  # Assume EFI already exists
+        ROOT_PART="${TARGET_DISK}p${NEXT_PART}"
+    else
+        EFI_PART="${TARGET_DISK}1"
+        ROOT_PART="${TARGET_DISK}${NEXT_PART}"
+    fi
+
+    # Create new partition in free space
+    fdisk "$TARGET_DISK" << FDISK_EOF
+n
+$NEXT_PART
+
+
+w
+FDISK_EOF
+
+    log_info "New partition: $ROOT_PART"
 fi
 
 log_info "EFI: $EFI_PART | Root: $ROOT_PART"
@@ -173,16 +209,26 @@ log_info "EFI: $EFI_PART | Root: $ROOT_PART"
 # Wait for partitions
 sleep 2
 for i in {1..10}; do
-    [[ -e "$EFI_PART" ]] && [[ -e "$ROOT_PART" ]] && break
+    [[ -e "$ROOT_PART" ]] && break
     sleep 1
 done
 
+if [[ ! -e "$ROOT_PART" ]]; then
+    log_error "Partition $ROOT_PART was not created"
+    exit 1
+fi
+
 log_phase "FORMATTING"
 
-log_info "Formatting EFI (FAT32)..."
-if ! mkfs.vfat -F 32 "$EFI_PART"; then
-    log_error "Failed to format EFI partition"
-    exit 1
+# Only format EFI if fresh disk (case 1)
+if [[ $INSTALLING_ON_ROOT -eq 0 ]]; then
+    log_info "Formatting EFI (FAT32)..."
+    if ! mkfs.vfat -F 32 "$EFI_PART"; then
+        log_error "Failed to format EFI partition"
+        exit 1
+    fi
+else
+    log_info "Skipping EFI format (using existing EFI partition)"
 fi
 
 log_info "Formatting root (BTRFS)..."
@@ -302,20 +348,42 @@ arch-chroot /mnt sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/
 # ============================================================================
 log_phase "BOOTLOADER SETUP"
 
-arch-chroot /mnt bootctl install
-
 ROOT_PARTUUID=$(blkid -s PARTUUID -o value "$ROOT_PART")
-cat > /mnt/boot/loader/entries/arch.conf << EOF
+
+if [[ $INSTALLING_ON_ROOT -eq 0 ]]; then
+    # Fresh disk: install bootloader
+    log_info "Installing systemd-boot..."
+    arch-chroot /mnt bootctl install
+
+    cat > /mnt/boot/loader/entries/arch.conf << EOF
 title Arch Linux
 linux /vmlinuz-linux-zen
 initrd /initramfs-linux-zen.img
 options root=PARTUUID=$ROOT_PARTUUID rootflags=subvol=@ rw
 EOF
 
-cat > /mnt/boot/loader/loader.conf << EOF
+    cat > /mnt/boot/loader/loader.conf << EOF
 default arch.conf
 timeout 3
 EOF
+else
+    # Existing system: create entry for new system
+    log_info "Adding boot entry for new Arch system..."
+
+    # Assume EFI is at /boot in existing system
+    if [[ -d /boot/loader/entries ]]; then
+        mkdir -p /mnt/boot/loader/entries 2>/dev/null || true
+        cat > /mnt/boot/loader/entries/arch-new.conf << EOF
+title Arch Linux (New Installation)
+linux /vmlinuz-linux-zen
+initrd /initramfs-linux-zen.img
+options root=PARTUUID=$ROOT_PARTUUID rootflags=subvol=@ rw
+EOF
+        log_warn "Boot entry created. Update bootloader manually if needed."
+    else
+        log_warn "systemd-boot not detected. Manual bootloader config needed."
+    fi
+fi
 
 log_info "✓ Bootloader configured"
 
