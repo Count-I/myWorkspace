@@ -248,41 +248,62 @@ done
 log_info "Creating FAT32 for EFI..."
 RETRY_COUNT=0
 MAX_RETRIES=3
+
 while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
-    if mkfs.vfat -F 32 "$EFI_PART" 2>/dev/null; then
+    if mkfs.vfat -F 32 -n "ARCH_EFI" "$EFI_PART" 2>/dev/null; then
         log_info "✓ EFI partition formatted"
         break
     else
         RETRY_COUNT=$((RETRY_COUNT + 1))
-        log_warn "EFI format failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
-        sleep 2
-        wipefs -a "$EFI_PART" 2>/dev/null || true
+        if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+            log_warn "EFI format failed (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+            # Force clean with dd to clear any old filesystem signatures
+            dd if=/dev/zero of="$EFI_PART" bs=1M count=1 2>/dev/null || true
+            sleep 1
+        fi
     fi
 done
 
 if [[ $RETRY_COUNT -eq $MAX_RETRIES ]]; then
     log_error "Could not format EFI partition after $MAX_RETRIES attempts."
-    log_error "The partition may be read-only or hardware error. Check: blockdev --getro $EFI_PART"
+    log_error ""
+    log_error "Debugging:"
+    log_error "  mkfs.vfat -F 32 $EFI_PART"
+    mkfs.vfat -F 32 "$EFI_PART" 2>&1 || true
+    log_error ""
+    log_error "  blockdev --getro $EFI_PART (should be 0)"
+    blockdev --getro "$EFI_PART" || true
     exit 1
 fi
 
 # Format root partition with retry
 log_info "Creating BTRFS for root..."
 RETRY_COUNT=0
+
 while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
     if mkfs.btrfs -f "$ROOT_PART" 2>/dev/null; then
         log_info "✓ BTRFS partition formatted"
         break
     else
         RETRY_COUNT=$((RETRY_COUNT + 1))
-        log_warn "BTRFS format failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
-        sleep 2
-        wipefs -a "$ROOT_PART" 2>/dev/null || true
+        if [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; then
+            log_warn "BTRFS format failed (attempt $RETRY_COUNT/$MAX_RETRIES)"
+            sleep 1
+            # Force clean the partition
+            wipefs -af "$ROOT_PART" 2>/dev/null || true
+            dd if=/dev/zero of="$ROOT_PART" bs=1M count=10 2>/dev/null || true
+            sleep 1
+        fi
     fi
 done
 
 if [[ $RETRY_COUNT -eq $MAX_RETRIES ]]; then
     log_error "Could not format BTRFS partition after $MAX_RETRIES attempts."
+    log_error ""
+    log_error "Debugging:"
+    log_error "  mkfs.btrfs -f $ROOT_PART"
+    mkfs.btrfs -f "$ROOT_PART" 2>&1 || true
     exit 1
 fi
 
