@@ -112,13 +112,15 @@ log_info "Proceeding with installation on $TARGET_DISK"
 # ============================================================================
 log_phase "PARTITIONING DISK"
 
-log_warn "Unmounting any mounted partitions..."
-for partition in "${TARGET_DISK}"*; do
-    if mountpoint -q "$partition" 2>/dev/null; then
-        log_info "  Unmounting $partition..."
-        umount -f "$partition" 2>/dev/null || umount -l "$partition" 2>/dev/null || true
-    fi
-done
+log_warn "Unmounting all partitions from target disk..."
+# Find all mount points for partitions of this disk and unmount them
+MOUNTED=$(mount | grep "$TARGET_DISK" | awk '{print $3}')
+if [[ -n "$MOUNTED" ]]; then
+    while IFS= read -r mount_point; do
+        log_info "  Unmounting $mount_point..."
+        umount -f "$mount_point" 2>/dev/null || umount -l "$mount_point" 2>/dev/null || true
+    done <<< "$MOUNTED"
+fi
 sleep 1
 
 log_warn "Wiping disk..."
