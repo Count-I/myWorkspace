@@ -42,11 +42,34 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# Verify we're on Arch ISO
+# Verify we're on Arch Linux
 if ! grep -q "Arch" /etc/os-release 2>/dev/null; then
     log_error "This script must run from Arch ISO."
     exit 1
 fi
+
+# Verify we're running from a live ISO, not from the target system
+RUNNING_DISK=$(df -P / | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//')
+log_info "Script is running from: $RUNNING_DISK"
+
+# Common ISO mount points: loop devices, sr0, iso9660
+if [[ ! "$RUNNING_DISK" =~ (loop|sr|iso|ram|tmpfs) ]]; then
+    log_error "WARNING: Script appears to be running from a persistent disk: $RUNNING_DISK"
+    log_error ""
+    log_error "This script MUST be executed from Arch ISO (live environment), not from"
+    log_error "an already-installed system on the target disk."
+    log_error ""
+    log_error "If you're in a VM:"
+    log_error "  1. Boot the Arch ISO as a live environment"
+    log_error "  2. Ensure internet is available: ping archlinux.org"
+    log_error "  3. Clone the repo: git clone ... && cd myWorkspace"
+    log_error "  4. Run: sudo bash arch-install.sh"
+    log_error ""
+    log_error "Your running filesystem: $RUNNING_DISK"
+    exit 1
+fi
+
+log_info "✓ Running from live ISO (not from target disk)"
 
 log_phase "ARCH LINUX INSTALLER"
 echo ""
